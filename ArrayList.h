@@ -12,6 +12,7 @@
         0.1     2014/5/1    Finish without iterator;
         0.2     2014/5/4    Finish without Compile;
         1.0     2014/5/18   Pass TA Test;
+        1.1     2014/5/23   Bug fixed, memory leak fixed, Pass all Test;
 */
 /**
  * The ArrayList is just like vector in C++.
@@ -36,10 +37,10 @@ public:
     }
     class Iterator
     {
-        int idx;
+        int idx,removed;
         ArrayList * al;
     public:
-        Iterator(ArrayList *x){idx = -1;al = x;}
+        Iterator(ArrayList *x){idx = -1;al = x;removed=0;}
         /**
          * TODO Returns true if the iteration has more elements.
          */
@@ -51,7 +52,7 @@ public:
          */
         const T &next() {
             if (idx==al->sz-1) throw ElementNotExist();
-            else {idx++;return al->data[idx];}
+            else {idx++;removed=0;return al->data[idx];}
         }
 
         /**
@@ -63,8 +64,8 @@ public:
          * @throw ElementNotExist
          */
         void remove() {
-            if (al->sz==0) throw ElementNotExist();
-            al->sz--;   idx--;
+            if ((al->sz==0)||(idx==-1)||(removed==1)) throw ElementNotExist();
+            al->sz--;   idx--;  removed = 1;
             for (int i=idx+2;i<=al->sz;i++) al->data[i-1] = al->data[i];
         }
     };
@@ -84,7 +85,7 @@ public:
      */
     ArrayList& operator=(const ArrayList& x) {
         capacity = x.capacity;  sz = x.sz;
-        data = new T[capacity];
+        delete [] data; data = new T[capacity];
         for (int i=0;i<sz;i++) data[i] = x.data[i];
     }
 
@@ -114,7 +115,7 @@ public:
      */
     void add(int index, const T& element) {
         if (sz==capacity) DoubleArray();
-        if ((index<0)||(index>=sz)) throw IndexOutOfBound();
+        if ((index<0)||(index>sz)) throw IndexOutOfBound();
         for (int i=sz;i>index;i--) data[i] = data[i-1];
         data[index] = element;  sz++;
     }
