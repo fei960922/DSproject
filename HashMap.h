@@ -98,9 +98,9 @@ public:
         for (int i=0;i<c2;i++) thash[i] = NULL;
         for (int i=0;i<c1;i++)
             for (Entry *idx = h1[i];idx!=NULL;idx = idx->next){
-                I_put(idx->getKey(),idx->getValue(),thash);
+                I_put(idx->key,idx->value,thash);
             }
-        if (del) I_clear(h1,capacity/2);
+        if (del) {I_clear(h1,capacity/2);delete [] h1;}
         return thash;
     }
 
@@ -149,13 +149,13 @@ public:
     /**
      * TODO Destructor
      */
-    ~HashMap() {I_clear(hash,capacity);delete[] hash;}
+    ~HashMap() {I_clear(hash,capacity);delete [] hash;}
 
     /**
      * TODO Assignment operator
      */
     HashMap &operator=(const HashMap &x) {
-        I_clear(hash,capacity);
+        I_clear(hash,capacity); delete [] hash;
         capacity = x.capacity;  sz = x.sz;  maxhash = x.maxhash;
         hash = I_copy(capacity,capacity,x.hash);
     }
@@ -219,7 +219,7 @@ public:
     void put(const K &key, const V &value) {
         for (Entry *idx = hash[pos(key)];idx!=NULL;idx = idx->next)
             if (idx->getKey()==key) {idx->value = value;return;}
-        if (sz*2>=capacity) {
+        if (sz*4/3>=capacity) {
             capacity = capacity *2 +1;
             hash = I_copy(capacity/2,capacity,hash,1);
         }
