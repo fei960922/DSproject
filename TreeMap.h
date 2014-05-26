@@ -26,10 +26,9 @@ public:
         V value;
         Entry *son[2];
         Entry *father;
-        Entry() {father=son[0]=son[1]=NULL;}
-        Entry(K k, V v) {key = k;value = v;father=son[0]=son[1]=NULL;}
-        K getKey() const {return key;}
-        V getValue() const {return value;}
+        Entry(K k=0, V v=0) {key = k;value = v;father=son[0]=son[1]=NULL;}
+        K getKey() {return key;}
+        V getValue() {return value;}
     };
 private:
     Entry *root;
@@ -46,45 +45,56 @@ private:
         y->father = u;  u->son[il] = y;
     }
     void splay(Entry *u){
-        while (u!=root) if (u->father==root) zig(u);
+        while (u!=root) {if (u->father==root) zig(u);
         else if (sonc(u) == sonc(u->father)) {zig(u->father);zig(u);}
-        else {zig(u);zig(u);}
+        else {zig(u);zig(u);}}
     }
     Entry *I_get(K key){
         Entry *idx = root;
         while (idx) {
-            if (idx->key==key) return idx;
-            if (idx->key<key) idx = idx->son[1];
-            else idx = idx->son[0];
+            if (idx->key==key) {splay(idx); return idx;}
+            idx = idx->son[(idx->key<key)?1:0];
         }
         return NULL;
     }
-    bool I_findv(V v,Entry *u){
-        if (u==NULL) return false;
-        return ((u->value==v)||(I_findv(v,u->son[0]))||(I_findv(v,u->son[1])));
-    }
-    void I_clear(Entry *u){
-        if (u==NULL) return;
-        I_clear(u->son[0]); I_clear(u->son[1]);
-        delete u;
-    }
-    void I_copy(Entry *u,Entry *v){
-        for (int i=0;i<2;i++) if (v->son[i]) {
-            u->son[i] = new Entry(v->son[i]->key,v->son[i]->value);
-            u->son[i]->father = u;
-            I_copy(u->son[i],v->son[i]);
+    void I_clear(){
+        if (sz==0) return;
+        Entry **q = new Entry*[sz];
+        Entry *u;
+        int qdx = 1;    q[0] = root;
+        while (qdx) {
+            qdx--;  u = q[qdx];
+            for (int i=0;i<2;i++)
+                if (u->son[i]) {q[qdx] = u->son[i];qdx++;}
+            delete u;
         }
+        delete[] q;
+    }
+    void I_copy(Entry *root,Entry *xroot){
+        Entry **qa = new Entry*[sz];
+        Entry **qb = new Entry*[sz];
+        Entry *u,*v;
+        int qdx = 1;    qa[0] = root;   qb[0] = xroot;
+        while (qdx) {
+            qdx--;u = qa[qdx];  v = qb[qdx];
+            for (int i=0;i<2;i++) if (v->son[i]) {
+                u->son[i] = new Entry(v->son[i]->key,v->son[i]->value);
+                u->son[i]->father = u;
+                qa[qdx] = u->son[i];    qb[qdx] = v->son[i];
+                qdx++;
+            }
+        }
+        delete[] qa; delete[] qb;
     }
 public:
     class Iterator
     {
         Entry *idx;
-        int crt; //0=left child from F;1=right child from F;2=from left child;3=from right child;
         TreeMap *tm;
     public:
-        Iterator(TreeMap *x) {
+        Iterator(TreeMap *x=0) {
             tm = x;
-            if (x->sz) {
+            if (x && x->sz) {
                 idx = x->root;
                 while (idx->son[0]) idx = idx->son[0];
             } else idx = NULL;
@@ -121,12 +131,13 @@ public:
     /**
      * TODO Destructor
      */
-    ~TreeMap() {if (sz) I_clear(root);}
+    ~TreeMap() {I_clear();}
 
     /**
      * TODO Assignment operator
      */
     TreeMap &operator=(const TreeMap &x) {
+        I_clear();
         if (sz = x.sz) {
             root = new Entry(x.root->key,x.root->value);
             I_copy(root,x.root);
@@ -151,7 +162,7 @@ public:
     /**
      * TODO Removes all of the mappings from this map.
      */
-    void clear() {I_clear(root);    root = NULL;    sz = 0;}
+    void clear() {I_clear();    root = NULL;    sz = 0;}
 
     /**
      * TODO Returns true if this map contains a mapping for the specified key.
@@ -161,14 +172,26 @@ public:
     /**
      * TODO Returns true if this map maps one or more keys to the specified value.
      */
-    bool containsValue(const V &value) {return (I_findv(value,root));}
+    bool containsValue(const V &v) {
+        Entry **q = new Entry*[sz];
+        Entry *u;
+        int qdx = 1;    q[0] = root;
+        while (qdx) {
+            qdx--;  u = q[qdx];
+            if (u->value==v) break;
+            for (int i=0;i<2;i++)
+                if (u->son[i]) {q[qdx] = u->son[i];qdx++;}
+        }
+        delete[] q;
+        return (u->value==v);
+    }
 
     /**
      * TODO Returns a const reference to the value to which the specified key is mapped.
      * If the key is not present in this map, this function should throw ElementNotExist exception.
      * @throw ElementNotExist
      */
-    const V &get(const K &key) {
+     V &get(const K &key) {
         Entry *idx = I_get(key);
         if (idx) return idx->value;
         else throw ElementNotExist();
@@ -183,18 +206,19 @@ public:
      * TODO Associates the specified value with the specified key in this map.
      */
     void put(const K &key, const V &value) {
-        if (I_get(key)) {I_get(key)->value = value;return;}
-        Entry *u = new Entry(key,value);   sz++;
-        u->son[0] = NULL;   u->son[1] =NULL;
-        u->key = key;       u->value = value;
         Entry *y = root;
-        if (y==NULL) {root = u; return;}
+        if (y==NULL) {root = new Entry(key,value);sz++; return;}
         for (;;) {
-            int il = (y->key<u->key)?1:0;
-            if (y->son[il]) y = y->son[il];
+            if(!(y->key<key || key<y->key)) {
+                y->value = value;
+                splay(y);   return;
+            }
+            int il = (y->key<key)?1:0;
+            if (y->son[il]) {y = y->son[il];}
             else {
+                Entry *u = new Entry(key,value);
                 u->father = y;  y->son[il] = u;
-                splay(u);break;
+                sz++;   splay(u);   break;
             }
         }
     }
