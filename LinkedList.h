@@ -4,6 +4,7 @@
 
 #include "IndexOutOfBound.h"
 #include "ElementNotExist.h"
+#include <iostream>
 /*
     Author: Jerry Xu;
     Number: 5130309056;
@@ -13,6 +14,7 @@
         0.2     2014/5/2    Finish without iterator;
         0.3     2014/5/5    Finish without Compile;
         1.0     2014/5/18   Pass TA Test;
+        1.1     2014/5/23   Bug fixed, memory leak fixed, Pass all Test;
 */
 /**
  * A linked list.
@@ -26,9 +28,17 @@ class LinkedList
         Lnode *prev;
         Lnode *next;
         T value;
+        Lnode(T x){value = x;prev=NULL;next=NULL;}
+        Lnode(){prev=NULL;next=NULL;}
     };
     Lnode *first,*last;
     int sz;
+    Lnode *pos(int x) const {
+        if (x>=sz) return NULL;
+        Lnode *idx = first->next;
+        while (x--) idx = idx->next;
+        return idx;
+    }
     void I_Delete(Lnode *idx){
         if (idx!=last) idx->next->prev = idx->prev;
         else last = idx->prev;
@@ -36,13 +46,34 @@ class LinkedList
         else first = idx->next;
         delete idx; sz--;
     }
+    void I_Clear(){
+        Lnode *idx = first->next;
+        first->next = NULL;
+        for (int i=1;i<sz;i++) {
+            idx = idx->next;
+            delete idx->prev;}
+        delete idx; sz = 0;
+        last = first;
+    }
+    void I_Copy(LinkedList *c) {
+        sz = c->sz;
+        Lnode *temp,*temp2;
+        first = new Lnode;  temp2 = first;
+        if (sz) for (Lnode *idx = c->first->next;idx!=NULL;idx = idx->next) {
+            temp = new Lnode(idx->value);
+            temp->prev = temp2; temp2->next = temp;
+            temp2 = temp;
+        } else temp = first;
+        last = temp;
+    }
 public:
     class Iterator
     {
         Lnode *idx;
         LinkedList *ll;
+        bool removed;
     public:
-        Iterator(LinkedList *x){ll = x;idx = ll->first;}
+        Iterator(LinkedList *x){ll = x;idx = ll->first;removed=0;}
 
         /**
          * TODO Returns true if the iteration has more elements.
@@ -55,7 +86,7 @@ public:
          */
         const T &next() {
             if (idx==ll->last) throw ElementNotExist();
-            idx = idx->next;   return (idx->value);
+            idx = idx->next;   removed = 0;  return (idx->value);
         }
 
         /**
@@ -67,10 +98,10 @@ public:
          * @throw ElementNotExist
          */
         void remove() {
-            if ((idx)&&(idx!=ll->first)) {
+            if ((idx)&&(idx!=ll->first)&&(!removed)) {
                 Lnode *temp = idx->prev;
                 ll->I_Delete(idx);
-                idx = temp;
+                idx = temp;     removed = 1;
             } else throw ElementNotExist();
         }
     };
@@ -78,53 +109,22 @@ public:
     /**
      * TODO Constructs an empty linked list
      */
-    LinkedList() {
-        sz = 0;first = new Lnode;      last = first;
-        first->prev = NULL;     first->next = NULL;
-    }
+    LinkedList() {sz = 0;first = last = new Lnode();}
 
     /**
      * TODO Copy constructor
      */
-    LinkedList(const LinkedList<T> &c) {
-        sz = c.sz;
-        Lnode *temp,*temp2;
-        first = new Lnode;  temp2 = first;
-        if (sz) for (Lnode *idx = c.first->next;idx!=NULL;idx = idx->next) {
-            temp = new Lnode;   temp->value = idx->value;
-            temp->prev = temp2; temp2->next = temp;
-            temp2 = temp;
-        } else temp = first;
-        last = temp;
-        first->prev = NULL; last->next = NULL;
-    }
+    LinkedList(LinkedList<T> &c) {I_Copy(&c);}
 
     /**
      * TODO Assignment operator
      */
-    LinkedList<T>& operator=(const LinkedList<T> &c) {
-        sz = c.sz;
-        Lnode *temp,*temp2;
-        first = new Lnode;  temp2 = first;
-        for (Lnode *idx = c.first->next;idx!=NULL;idx = idx->next) {
-            temp = new Lnode;   temp->value = idx->value;
-            temp->prev = temp2; temp2->next = temp;
-            temp2 = temp;
-        }
-        last = temp;
-        first->prev = NULL; last->next = NULL;
-    }
+    LinkedList<T>& operator=(LinkedList<T> &c) {I_Clear();I_Copy(&c);}
 
     /**
      * TODO Desturctor
      */
-    ~LinkedList() {
-        Lnode *idx = first;
-        for (int i=0;i<sz;i++) {
-            Lnode *temp = idx->next;
-            delete idx; idx = temp;}
-        delete idx;
-    }
+    ~LinkedList() {I_Clear();delete first;}
 
     /**
      * TODO Inserts the specified element to the specified position in this list.
@@ -134,14 +134,12 @@ public:
      */
     void add(int index, const T& element) {
         if ((index<0)||(index>sz)) throw IndexOutOfBound();
-        Lnode *temp = new Lnode;    sz++;
-        temp->value = element;
+        Lnode *temp = new Lnode(element);    sz++;
         if (index==sz-1) {
             last->next = temp;  temp->prev = last;
-            last = temp;        temp->next = NULL;
+            last = temp;
         }   else {
-            Lnode *idx = first;
-            for (int i=0;i<index;i++) idx = idx->next;
+            Lnode *idx = (index==0)?first:pos(index-1);
             temp->prev = idx;     temp->next = idx->next;
             idx->next = temp;     temp->next->prev = temp;
         }
@@ -167,22 +165,14 @@ public:
     /**
      * TODO Removes all of the elements from this list.
      */
-    void clear() {
-        Lnode *idx = first->next;
-        for (int i=1;i<sz;i++) {
-            idx = idx->next;
-            delete idx->prev;}
-        delete idx; sz = 0;
-    }
+    void clear() {I_Clear();sz = 0;}
 
     /**
      * TODO Returns true if this list contains the specified element.
      */
     bool contains(const T& e) const {
-        Lnode *idx = first->next;
-        for (int i=0;i<sz;i++) {
+        for (Lnode *idx = first->next;idx;idx = idx->next)
             if (idx->value==e) return true;
-            idx = idx->next;}
         return false;
     }
 
@@ -193,9 +183,7 @@ public:
      */
     const T& get(int index) const {
         if ((index<0)||(index>=sz)) throw IndexOutOfBound();
-        Lnode *idx = first;
-        for (int i=0;i<=index;i++) idx = idx->next;
-        return idx->value;
+        return pos(index)->value;
     }
 
     /**
@@ -228,9 +216,7 @@ public:
      */
     void removeIndex(int index) {
         if ((index<0)||(index>=sz)) throw IndexOutOfBound();
-        Lnode *idx = first;
-        for (int i=0;i<=index;i++) idx = idx->next;
-        I_Delete(idx);
+        I_Delete(pos(index));
     }
 
     /**
@@ -238,11 +224,8 @@ public:
      * Returns true if it was present in the list, otherwise false.
      */
     bool remove(const T &e) {
-        Lnode *idx = first->next;
-        for (int i=0;i<sz;i++) {
+        for (Lnode *idx = first->next;idx;idx = idx->next)
             if (e==idx->value) {I_Delete(idx);  return true;}
-            idx = idx->next;
-        }
         return false;
     }
 
@@ -271,9 +254,7 @@ public:
      */
     void set(int index, const T &element) {
         if ((index<0)||(index>=sz)) throw IndexOutOfBound();
-        Lnode *idx = first;
-        for (int i=0;i<=index;i++) idx = idx->next;
-        idx->value = element;
+        pos(index)->value = element;
     }
 
     /**
