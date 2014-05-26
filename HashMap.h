@@ -4,6 +4,7 @@
 #define __HASHMAP_H
 
 #include "ElementNotExist.h"
+
 /*
     Author: Jerry Xu;
     Number: 5130309056;
@@ -11,7 +12,7 @@
     Version:
         0.1     2014/5/2    Finish without Iterator;
         0.2     2014/5/5    Finish without Compile;
-        1.0     1014/5/19   Pass TA Test;
+        1.0     2014/5/19   Pass TA Test;
 */
 /**
  * HashMap is a map implemented by hashing. Also, the 'capacity' here means the
@@ -59,14 +60,14 @@ public:
         K key;
         V value;
         Entry *next;
-        Entry(K k, V v) {key = k;    value = v;}
+        Entry(K k, V v) {key = k;value = v;next = NULL;}
         K getKey() const {return key;}
         V getValue() const {return value;}
     };
     int sz,capacity,maxhash;
     Entry **hash;
-    int pos (K k) const {return (H::hashCode(k)%capacity);}
-    void print(char s = 'A') {
+    int pos (K k) const {return (abs(H::hashCode(k))%capacity);}
+/*  void print(char s = 'A') {
         std::cout<<s<<" I_PRINT size="<<sz<<" maxhash="<<maxhash<<"\n";
         for (int i=0;i<capacity;i++)
             if (hash[i]==NULL) std::cout<<i<<" : NULL\n";
@@ -74,7 +75,7 @@ public:
                 while (idx) {std::cout<<" -> "<<idx->getKey();idx = idx->next;}
                 std::cout<<"\n";}
         std::cout<<"FINISH\n";
-    }
+    }   */
     void I_put(K k,V v,Entry **h){
         Entry *temp = new Entry(k,v);
         int t = pos(k);
@@ -154,6 +155,7 @@ public:
      * TODO Assignment operator
      */
     HashMap &operator=(const HashMap &x) {
+        I_clear(hash,capacity);
         capacity = x.capacity;  sz = x.sz;  maxhash = x.maxhash;
         hash = I_copy(capacity,capacity,x.hash);
     }
@@ -217,7 +219,7 @@ public:
     void put(const K &key, const V &value) {
         for (Entry *idx = hash[pos(key)];idx!=NULL;idx = idx->next)
             if (idx->getKey()==key) {idx->value = value;return;}
-        if (sz==capacity) {
+        if (sz>=capacity) {
             capacity = capacity *2 +1;
             hash = I_copy(capacity/2,capacity,hash,1);
         }
@@ -230,14 +232,16 @@ public:
      * @throw ElementNotExist
      */
     void remove(const K &key) {
-        if (hash[pos(key)]->key==key) {
-            Entry *temp = hash[pos(key)]->next; delete hash[pos(key)];
-            hash[pos(key)] = temp;  sz--;
-            if ((maxhash==pos(key))&&(temp==NULL)){
+        int p = pos(key);
+        if (!hash[p]) throw ElementNotExist();
+        if (hash[p]->key==key) {
+            Entry *temp = hash[p]->next; delete hash[p];
+            hash[p] = temp;  sz--;
+            if ((maxhash==p)&&(temp==NULL)){
                 maxhash--;while ((hash[maxhash]==NULL)&&(maxhash>=0)) maxhash--;}
             return;
         }
-        for (Entry *idx = hash[pos(key)];idx->next!=NULL;idx = idx->next)
+        for (Entry *idx = hash[p];idx->next!=NULL;idx = idx->next)
             if (idx->next->getKey()==key) {
                 Entry *temp = idx->next;
                 idx->next = temp->next;
