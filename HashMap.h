@@ -219,7 +219,7 @@ public:
     void put(const K &key, const V &value) {
         for (Entry *idx = hash[pos(key)];idx!=NULL;idx = idx->next)
             if (idx->getKey()==key) {idx->value = value;return;}
-        if (sz>=capacity) {
+        if (sz*2>=capacity) {
             capacity = capacity *2 +1;
             hash = I_copy(capacity/2,capacity,hash,1);
         }
@@ -238,7 +238,9 @@ public:
             Entry *temp = hash[p]->next; delete hash[p];
             hash[p] = temp;  sz--;
             if ((maxhash==p)&&(temp==NULL)){
-                maxhash--;while ((hash[maxhash]==NULL)&&(maxhash>=0)) maxhash--;}
+                maxhash--;while ((hash[maxhash]==NULL)&&(maxhash>0)) maxhash--;
+                if (maxhash==0 && hash[maxhash]==NULL) maxhash = -1;
+            }
             return;
         }
         for (Entry *idx = hash[p];idx->next!=NULL;idx = idx->next)
