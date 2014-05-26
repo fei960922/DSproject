@@ -99,27 +99,30 @@ public:
     class Iterator
     {
         int idx;
-        int *list;
+        int *nxt,*prv;
         PriorityQueue *pq;
     public:
         Iterator(PriorityQueue *x){
             pq = x;  idx = 0;
-            //list = new int[pq->sz+1];
-            //for (int i=1;i<=pq->sz;i++)
+            nxt = new int[pq->sz+1];    prv = new int[pq->sz+1];
+            nxt[0] = 10000000;
+            for (int i=0;i<=pq->sz;i++) prv[i] = i-1;
+            for (int i=0;i<=pq->sz-1;i++) nxt[i] = i+1;
+            nxt[pq->sz] = 10000000;
         }
-        ~Iterator(){}
+        ~Iterator(){delete [] nxt;}
         /**
          * TODO Returns true if the iteration has more elements.
          */
-        bool hasNext() {return (idx!=pq->sz);}
+        bool hasNext() {return (nxt[idx]<=pq->sz);}
 
         /**
          * TODO Returns the next element in the iteration.
-         * @throw ElementNotExist exception when hasNext() == false
+         * @throw ElementNotExist exception when hasnext() == false
          */
         const V &next() {
-            if (idx==pq->sz) throw ElementNotExist();
-            else {idx++;return pq->data[idx];}
+            if (nxt[idx]>pq->sz) throw ElementNotExist();
+            else {idx = nxt[idx];return pq->data[idx];}
         }
 
 		/**
@@ -130,10 +133,25 @@ public:
 		 * any way other than by calling this method.
 		 * @throw ElementNotExist
 		 */
-		void remove() {
-            if (pq->sz==0) throw ElementNotExist();
-            //Still Writing......
-		}
+        int I_swap(int x){
+            std::swap(nxt[prv[idx]],nxt[prv[x]]);std::swap(prv[idx],prv[x]);
+            std::swap(prv[nxt[idx]],prv[nxt[x]]);std::swap(nxt[idx],nxt[x]);
+            std::swap(pq->data[idx],pq->data[x]);return x;
+        }
+        void remove() {std::cout<<idx<<' ';
+            if (idx==0 || pq->sz==0) throw ElementNotExist();
+            nxt[0] = nxt[idx];   prv[nxt[idx]] = 0;
+            pq->data[idx] = pq->data[pq->sz];
+            nxt[prv[pq->sz]] = idx; prv[idx] = prv[pq->sz];    pq->sz--;
+            while (idx*2<=pq->sz) if ((idx*2+1<=pq->sz)&&(pq->cmp(pq->data[idx*2+1],pq->data[idx*2]))){
+                if (pq->cmp(pq->data[idx*2+1],pq->data[idx]))
+                idx = I_swap(idx*2+1);  else break;
+            } else if (pq->cmp(pq->data[idx*2],pq->data[idx]))
+            idx = I_swap(idx*2);        else break;
+            while (idx>1) if (pq->cmp(pq->data[idx],pq->data[idx/2]))
+            idx = I_swap(idx/2);        else break;
+            idx = 0;
+        }
     };
 
     /**
@@ -162,7 +180,6 @@ public:
         capacity = x.capacity;  sz = x.sz;
         data = new V[capacity+1];
         for (int i=1;i<=sz;i++) data[i] = x.data[i];
-
     }
 
 	/**
@@ -173,7 +190,7 @@ public:
 	PriorityQueue(const ArrayList<V> &x) {
         capacity = x.capacity;  sz = x.sz;
         data = new V[capacity+1];
-        for (int i=0;i<x.sz;i++) data[i] = x.data[i];
+        for (int i=0;i<x.sz;i++) data[i+1] = x.data[i];
         for (int i=sz/2;i>0;i--) PushDown(i);
     }
 
