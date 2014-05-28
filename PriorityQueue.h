@@ -77,6 +77,7 @@ public:
 template <class V, class C = Less<V> >
 class PriorityQueue
 {
+public:
     int sz,capacity;
     V *data;
     C cmp;
@@ -100,30 +101,32 @@ class PriorityQueue
 public:
     class Iterator
     {
-        int idx;
-        int *nxt,*prv;
+        int idx,y;
+        int *nxt,*point,*pdata;
         PriorityQueue *pq;
     public:
         Iterator(PriorityQueue *x){
             pq = x;  idx = 0;   int z = pq->sz;
-            nxt = new int[z+2];    prv = new int[z+2];
-            for (int i=0;i<=z;i++) prv[i] = i-1;
+            nxt = new int[z+2];
+            point = new int[z+2];  pdata = new int[z+2];
+            for (int i=0;i<=z;i++) point[i] = i;
+            for (int i=0;i<=z;i++) pdata[i] = i;
             for (int i=0;i<=z;i++) nxt[i] = i+1;
-            prv[0] = z+1;
+            nxt[z] = -1;
         }
-        ~Iterator(){delete [] nxt;delete [] prv;}
+        ~Iterator(){delete [] nxt;delete [] point;delete [] pdata;}
         /**
          * TODO Returns true if the iteration has more elements.
          */
-        bool hasNext() {return (nxt[idx]<=pq->sz);}
+        bool hasNext() {return (nxt[idx]>0);}
 
         /**
          * TODO Returns the next element in the iteration.
          * @throw ElementNotExist exception when hasnext() == false
          */
         const V &next() {
-            if (nxt[idx]>pq->sz) throw ElementNotExist();
-            else {idx = nxt[idx];return pq->data[idx];}
+            if (nxt[idx]<0) throw ElementNotExist();
+            else {idx = nxt[idx];return pq->data[pdata[idx]];}
         }
 
 		/**
@@ -135,32 +138,22 @@ public:
 		 * @throw ElementNotExist
 		 */
         int I_swap(int x){
-            std::swap(pq->data[idx],pq->data[x]);
-            if (idx==nxt[x]) {
-                nxt[prv[x]] = idx;  prv[nxt[idx]] = x;
-                nxt[x] = nxt[idx];  prv[idx] = prv[x];
-                prv[x] = idx;       nxt[idx] = x;
-            } else if (x==nxt[idx]) {
-                nxt[prv[idx]] = x;  prv[nxt[x]] = idx;
-                nxt[idx] = nxt[x];  prv[x] = prv[idx];
-                prv[idx] = x;       nxt[x] = idx;
-            } else {
-                std::swap(nxt[prv[idx]],nxt[prv[x]]);std::swap(prv[idx],prv[x]);
-                std::swap(prv[nxt[idx]],prv[nxt[x]]);std::swap(nxt[idx],nxt[x]);}
-            for (int i=0;i<pq->sz;i=nxt[i])
+            std::swap(pq->data[y],pq->data[x]);
+            std::swap(pdata[point[y]],pdata[point[x]]);
+            std::swap(point[y],point[x]);
             return x;
         }
         void remove() {
             if (idx==0 || pq->sz==0) throw ElementNotExist();
-            int z = pq->sz; I_swap(z);  pq->sz--;
-            while (idx*2<=pq->sz) if ((idx*2+1<=pq->sz)&&(pq->cmp(pq->data[idx*2+1],pq->data[idx*2]))){
-                if (pq->cmp(pq->data[idx*2+1],pq->data[idx]))
-                idx = I_swap(idx*2+1);  else break;
-            } else if (pq->cmp(pq->data[idx*2],pq->data[idx]))
-            idx = I_swap(idx*2);        else break;
-            while (idx>1) if (pq->cmp(pq->data[idx],pq->data[idx/2]))
-            idx = I_swap(idx/2);        else break;
-            idx = 0;    nxt[0] = nxt[z];
+            y = pdata[idx]; nxt[0] = nxt[idx];  idx = 0;
+            I_swap(pq->sz);  pq->sz--;
+            while (y*2<=pq->sz) if ((y*2+1<=pq->sz)&&(pq->cmp(pq->data[y*2+1],pq->data[y*2]))){
+                if (pq->cmp(pq->data[y*2+1],pq->data[y]))
+                y = I_swap(y*2+1);  else break;
+            } else if (pq->cmp(pq->data[y*2],pq->data[y]))
+            y = I_swap(y*2);        else break;
+            while (y>1) if (pq->cmp(pq->data[y],pq->data[y/2]))
+            y = I_swap(y/2);        else break;
         }
     };
 
