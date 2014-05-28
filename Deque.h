@@ -12,6 +12,7 @@
         0.1     2014/5/3    Finish without iterator;
         0.2     2014/5/5    Finish without Compile;
         1.0     2014/5/19   Pass TA Test;
+        1.1     2014/5/27   Bug fixed; Pass All Test;
 */
 /**
  * An deque is a linear collection that supports element insertion and removal at both ends.
@@ -44,11 +45,11 @@ class Deque
 public:
     class Iterator
     {
-    	int idx,de;
+    	int idx,de,removed;
     	Deque *dq;
     public:
-    	Iterator(Deque *xd,int x){
-    	    de = x;dq = xd;
+    	Iterator(int x,Deque *xd = 0){
+    	    de = x;dq = xd; removed = 1;
     	    idx = (de)?(dq->dec(dq->head)):(dq->tail);
         }
         /**
@@ -61,6 +62,7 @@ public:
          * @throw ElementNotExist exception when hasNext() == false
          */
         const T &next() {
+            removed = 1;
         	if (de) {
 	        	if (idx==dq->dec(dq->tail)) throw ElementNotExist();
 	        	return dq->data[idx = dq->inc(idx)];
@@ -79,13 +81,13 @@ public:
          * @throw ElementNotExist
          */
         void remove() {
-        	if (dq->sz){
+        	if (dq->sz && removed){
                 bool ok = (idx>=dq->head);
         		if (ok) {
         			for (int i=idx;i>dq->head;i--) dq->data[i] = dq->data[i-1];dq->head++;
         		} else {for (int i=idx;i<dq->tail-1;i++) dq->data[i] = dq->data[i+1];dq->tail--;}
         		if (de!=ok) idx = (de)?(dq->dec(idx)):(dq->inc(idx));
-        		dq->sz--;
+        		dq->sz--;   removed = 0;
         	} else throw ElementNotExist();
         }
     };
@@ -224,12 +226,12 @@ public:
 	 /**
 	  * TODO Returns an iterator over the elements in this deque in proper sequence.
 	  */
-	 Iterator iterator() {return Iterator(this,1);}
+	 Iterator iterator() {return Iterator(1,this);}
 
 	 /**
 	  * TODO Returns an iterator over the elements in this deque in reverse sequential order.
 	  */
-	 Iterator descendingIterator() {return Iterator(this,0);}
+	 Iterator descendingIterator() {return Iterator(0,this);}
 /*
 	 void print(){
         std::cout<<"Size:"<<sz<<" Capacity:"<<capacity<<" Head:"<<head<<" Tail:"<<tail<<'\n';
