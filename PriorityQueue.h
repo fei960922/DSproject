@@ -14,6 +14,8 @@
         0.2     2014/5/5    Finish without iterator::remove;
         0.3     2014/5/19   Pass TA Test without (iterator::remove&AL->PQ);
         0.4     2014/5/20   Pass TA Test without iterator::remove;
+        1.0     2014/5/27   Finish; Pass TA Test; (Failed others);
+        1.1     2014/5/28   Pass All Test;
 */
 /**
  * This is a priority queue based on a priority priority queue. The
@@ -103,14 +105,13 @@ public:
         PriorityQueue *pq;
     public:
         Iterator(PriorityQueue *x){
-            pq = x;  idx = 0;
-            nxt = new int[pq->sz+1];    prv = new int[pq->sz+1];
-            nxt[0] = 10000000;
-            for (int i=0;i<=pq->sz;i++) prv[i] = i-1;
-            for (int i=0;i<=pq->sz-1;i++) nxt[i] = i+1;
-            nxt[pq->sz] = 10000000;
+            pq = x;  idx = 0;   int z = pq->sz;
+            nxt = new int[z+2];    prv = new int[z+2];
+            for (int i=0;i<=z;i++) prv[i] = i-1;
+            for (int i=0;i<=z;i++) nxt[i] = i+1;
+            prv[0] = z+1;
         }
-        ~Iterator(){delete [] nxt;}
+        ~Iterator(){delete [] nxt;delete [] prv;}
         /**
          * TODO Returns true if the iteration has more elements.
          */
@@ -134,15 +135,24 @@ public:
 		 * @throw ElementNotExist
 		 */
         int I_swap(int x){
-            std::swap(nxt[prv[idx]],nxt[prv[x]]);std::swap(prv[idx],prv[x]);
-            std::swap(prv[nxt[idx]],prv[nxt[x]]);std::swap(nxt[idx],nxt[x]);
-            std::swap(pq->data[idx],pq->data[x]);return x;
+            std::swap(pq->data[idx],pq->data[x]);
+            if (idx==nxt[x]) {
+                nxt[prv[x]] = idx;  prv[nxt[idx]] = x;
+                nxt[x] = nxt[idx];  prv[idx] = prv[x];
+                prv[x] = idx;       nxt[idx] = x;
+            } else if (x==nxt[idx]) {
+                nxt[prv[idx]] = x;  prv[nxt[x]] = idx;
+                nxt[idx] = nxt[x];  prv[x] = prv[idx];
+                prv[idx] = x;       nxt[x] = idx;
+            } else {
+                std::swap(nxt[prv[idx]],nxt[prv[x]]);std::swap(prv[idx],prv[x]);
+                std::swap(prv[nxt[idx]],prv[nxt[x]]);std::swap(nxt[idx],nxt[x]);}
+            for (int i=0;i<pq->sz;i=nxt[i])
+            return x;
         }
-        void remove() {std::cout<<idx<<' ';
+        void remove() {
             if (idx==0 || pq->sz==0) throw ElementNotExist();
-            nxt[0] = nxt[idx];   prv[nxt[idx]] = 0;
-            pq->data[idx] = pq->data[pq->sz];
-            nxt[prv[pq->sz]] = idx; prv[idx] = prv[pq->sz];    pq->sz--;
+            int z = pq->sz; I_swap(z);  pq->sz--;
             while (idx*2<=pq->sz) if ((idx*2+1<=pq->sz)&&(pq->cmp(pq->data[idx*2+1],pq->data[idx*2]))){
                 if (pq->cmp(pq->data[idx*2+1],pq->data[idx]))
                 idx = I_swap(idx*2+1);  else break;
@@ -150,7 +160,7 @@ public:
             idx = I_swap(idx*2);        else break;
             while (idx>1) if (pq->cmp(pq->data[idx],pq->data[idx/2]))
             idx = I_swap(idx/2);        else break;
-            idx = 0;
+            idx = 0;    nxt[0] = nxt[z];
         }
     };
 
