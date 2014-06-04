@@ -4,6 +4,10 @@
 #define __HASHMAP_H
 
 #include "ElementNotExist.h"
+#include <iostream>
+#include <cstdlib>
+#include <cmath>
+#include <algorithm>
 
 /*
     Author: Jerry Xu;
@@ -13,6 +17,8 @@
         0.1     2014/5/2    Finish without Iterator;
         0.2     2014/5/5    Finish without Compile;
         1.0     2014/5/19   Pass TA Test;
+        1.1     2014/5/25   Bug fixed; Pass all Test;
+        1.2     2014/6/4    Bug fixed;
 */
 /**
  * HashMap is a map implemented by hashing. Also, the 'capacity' here means the
@@ -60,22 +66,23 @@ public:
         K key;
         V value;
         Entry *next;
-        Entry(K k, V v) {key = k;value = v;next = NULL;}
-        K getKey() const {return key;}
-        V getValue() const {return value;}
+        Entry(K k = 0, V v = 0) {key = k;value = v;next = NULL;}
+        const K& getKey() const {return key;}
+        const V& getValue() const {return value;}
     };
+private:
     int sz,capacity,maxhash;
     Entry **hash;
-    int pos (K k) const {return (abs(H::hashCode(k))%capacity);}
-/*  void print(char s = 'A') {
+    inline int pos (K k) const {return (std::abs(H::hashCode(k))%capacity);}
+    void print(char s = 'A') const {
         std::cout<<s<<" I_PRINT size="<<sz<<" maxhash="<<maxhash<<"\n";
         for (int i=0;i<capacity;i++)
-            if (hash[i]==NULL) std::cout<<i<<" : NULL\n";
+            if (hash[i]==NULL) std::cout<<i<<hash[0]<<" : NULL\n";
             else {std::cout<<i<<" : ";Entry *idx = hash[i];
                 while (idx) {std::cout<<" -> "<<idx->getKey();idx = idx->next;}
                 std::cout<<"\n";}
         std::cout<<"FINISH\n";
-    }   */
+    }   
     void I_put(K k,V v,Entry **h){
         Entry *temp = new Entry(k,v);
         int t = pos(k);
@@ -103,14 +110,14 @@ public:
         if (del) {I_clear(h1,capacity/2);delete [] h1;}
         return thash;
     }
-
+public:
     class Iterator
     {
         Entry *idx;
         int idxhash;
         const HashMap *hm;
     public:
-        Iterator(const HashMap *x){
+        Iterator(const HashMap *x = 0){
             idxhash = (x->sz)?-1:-2;
             hm = x;idx = NULL;
         }
@@ -149,15 +156,16 @@ public:
     /**
      * TODO Destructor
      */
-    ~HashMap() {I_clear(hash,capacity);delete [] hash;}
+    ~HashMap() {I_clear(hash,capacity); delete [] hash;}
 
     /**
      * TODO Assignment operator
      */
     HashMap &operator=(const HashMap &x) {
-        I_clear(hash,capacity); delete [] hash;
         capacity = x.capacity;  sz = x.sz;  maxhash = x.maxhash;
-        hash = I_copy(capacity,capacity,x.hash);
+        Entry **temp = I_copy(capacity,capacity,x.hash);
+        I_clear(hash,capacity); delete [] hash;
+        hash = temp;
     }
 
     /**
@@ -176,14 +184,14 @@ public:
     /**
      * TODO Removes all of the mappings from this map.
      */
-    void clear() {I_clear(hash,capacity);sz = 0;}
+    void clear() {I_clear(hash,capacity);   sz = 0;}
 
     /**
      * TODO Returns true if this map contains a mapping for the specified key.
      */
     bool containsKey(const K &key) const {
         for (Entry *idx = hash[pos(key)];idx!=NULL;idx = idx->next)
-            if (idx->getKey()==key) return true;
+            if (idx->key==key) return true;
         return false;
     }
 
@@ -193,7 +201,7 @@ public:
     bool containsValue(const V &value) const {
         for (int i=0;i<capacity;i++)
             for (Entry *idx = hash[i];idx!=NULL;idx = idx->next)
-                if (idx->getValue()==value) return true;
+                if (idx->value==value) return true;
         return false;
     }
 
@@ -204,7 +212,7 @@ public:
      */
     const V &get(const K &key) const {
         for (Entry *idx = hash[pos(key)];idx!=NULL;idx = idx->next)
-            if (idx->getKey()==key) return idx->value;
+            if (idx->key==key) return idx->value;
         throw ElementNotExist();
     }
 
@@ -212,14 +220,13 @@ public:
      * TODO Returns true if this map contains no key-value mappings.
      */
     bool isEmpty() const {return (sz==0);}
-
     /**
      * TODO Associates the specified value with the specified key in this map.
      */
-    void put(const K &key, const V &value) {
+    void put(const K &key, const V &value) {   
         for (Entry *idx = hash[pos(key)];idx!=NULL;idx = idx->next)
-            if (idx->getKey()==key) {idx->value = value;return;}
-        if (sz*4/3>=capacity) {
+            if (idx->key==key) {idx->value = value;return;}
+        if (sz*2>=capacity) {
             capacity = capacity *2 +1;
             hash = I_copy(capacity/2,capacity,hash,1);
         }
@@ -238,13 +245,14 @@ public:
             Entry *temp = hash[p]->next; delete hash[p];
             hash[p] = temp;  sz--;
             if ((maxhash==p)&&(temp==NULL)){
-                maxhash--;while ((hash[maxhash]==NULL)&&(maxhash>0)) maxhash--;
+                maxhash--;
+                while ((hash[maxhash]==NULL)&&(maxhash>0)) maxhash--;
                 if (maxhash==0 && hash[maxhash]==NULL) maxhash = -1;
             }
             return;
         }
         for (Entry *idx = hash[p];idx->next!=NULL;idx = idx->next)
-            if (idx->next->getKey()==key) {
+            if (idx->next->key==key) {
                 Entry *temp = idx->next;
                 idx->next = temp->next;
                 delete temp;    sz--;    return;
