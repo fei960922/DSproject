@@ -11,6 +11,8 @@
         0.1     2014/5/4    Finish without Iterator;
         0.2     2014/5/19   Finish without compile;
         1.0     2014/5/19   Pass TA Test;
+        1.1     2014/5/25   Pass all Test;
+        1.2     2014/6/4    Bug fixed;
 */
 /**
  * TreeMap is the balanced-tree implementation of map. The iterators must
@@ -27,8 +29,8 @@ public:
         Entry *son[2];
         Entry *father;
         Entry(K k=0, V v=0) {key = k;value = v;father=son[0]=son[1]=NULL;}
-        K getKey() {return key;}
-        V getValue() {return value;}
+        const K& getKey() const {return key;}
+        const V& getValue() const {return value;}
     };
 private:
     Entry *root;
@@ -92,7 +94,7 @@ public:
         Entry *idx;
         TreeMap *tm;
     public:
-        Iterator(TreeMap *x=0) {
+        Iterator(TreeMap *x = 0) {
             tm = x;
             if (x && x->sz) {
                 idx = x->root;
@@ -137,10 +139,10 @@ public:
      * TODO Assignment operator
      */
     TreeMap &operator=(const TreeMap &x) {
-        I_clear();
         if (sz = x.sz) {
-            root = new Entry(x.root->key,x.root->value);
-            I_copy(root,x.root);
+            Entry *temp = new Entry(x.root->key,x.root->value);
+            I_copy(temp,x.root);
+            I_clear();  root = temp; 
         }
     }
 
@@ -173,6 +175,7 @@ public:
      * TODO Returns true if this map maps one or more keys to the specified value.
      */
     bool containsValue(const V &v) {
+        if (sz==0) return false;
         Entry **q = new Entry*[sz];
         Entry *u;
         int qdx = 1;    q[0] = root;
@@ -230,6 +233,7 @@ public:
      */
     void remove(const K &key) {
         Entry *u = I_get(key);
+        if (u==NULL) throw ElementNotExist();
         splay(u);
         Entry *l = u->son[0];
         Entry *r = u->son[1];
