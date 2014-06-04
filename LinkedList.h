@@ -15,6 +15,7 @@
         0.3     2014/5/5    Finish without Compile;
         1.0     2014/5/18   Pass TA Test;
         1.1     2014/5/23   Bug fixed, memory leak fixed, Pass all Test;
+        1.2     2014/6/2    Final Version;
 */
 /**
  * A linked list.
@@ -119,7 +120,7 @@ public:
     /**
      * TODO Assignment operator
      */
-    LinkedList<T>& operator=(LinkedList<T> &c) {I_Clear();I_Copy(&c);}
+    LinkedList<T>& operator=(LinkedList<T> &c) {I_Clear();delete first;I_Copy(&c);}
 
     /**
      * TODO Desturctor
