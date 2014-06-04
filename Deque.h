@@ -13,6 +13,7 @@
         0.2     2014/5/5    Finish without Compile;
         1.0     2014/5/19   Pass TA Test;
         1.1     2014/5/27   Bug fixed; Pass All Test;
+        2.0     2014/6/2    Final Version --- AC;
 */
 /**
  * An deque is a linear collection that supports element insertion and removal at both ends.
