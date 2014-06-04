@@ -13,6 +13,7 @@
         0.2     2014/5/4    Finish without Compile;
         1.0     2014/5/18   Pass TA Test;
         1.1     2014/5/23   Bug fixed, memory leak fixed, Pass all Test;
+        2.0     2014/6/2    Final Version --- AC;
 */
 /**
  * The ArrayList is just like vector in C++.
@@ -40,7 +41,7 @@ public:
         int idx,removed;
         ArrayList * al;
     public:
-        Iterator(ArrayList *x){idx = -1;al = x;removed=0;}
+        Iterator(ArrayList *x = 0){idx = -1;al = x;removed=0;}
         /**
          * TODO Returns true if the iteration has more elements.
          */
@@ -85,8 +86,9 @@ public:
      */
     ArrayList& operator=(const ArrayList& x) {
         capacity = x.capacity;  sz = x.sz;
-        delete [] data; data = new T[capacity];
-        for (int i=0;i<sz;i++) data[i] = x.data[i];
+        T *temp = new T[capacity];
+        for (int i=0;i<sz;i++) temp[i] = x.data[i];
+        delete [] data; data = temp;
     }
 
     /**
